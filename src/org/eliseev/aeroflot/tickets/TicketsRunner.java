@@ -3,6 +3,7 @@ package org.eliseev.aeroflot.tickets;
 import org.eliseev.aeroflot.tickets.utils.PgConnectionManager;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -15,11 +16,36 @@ public class TicketsRunner {
     public static void main(String[] args) {
 //        Long flightId = 45000L;
 //        System.out.println(getTicketsId(flightId));
-        List<Long> result = getFlightsIdBetween(
-                LocalDateTime.of(2023, 12, 11, 3, 4),
-                LocalDateTime.of(2023, 12, 13, 12, 30)
-        );
-        System.out.println(result);
+//        List<Long> result = getFlightsIdBetween(
+//                LocalDateTime.of(2023, 12, 11, 3, 4),
+//                LocalDateTime.of(2023, 12, 13, 12, 30)
+//        );
+//        System.out.println(result);
+        showMetaInf();
+    }
+
+    private static void showMetaInf() {
+        try (Connection con = PgConnectionManager.open()) {
+            DatabaseMetaData metaData = con.getMetaData();
+            ResultSet tableRs = metaData.getTables(null, "public", "%", new String[]{"TABLE"});
+            StringBuilder sb = new StringBuilder();
+            while (tableRs.next()) {
+                String tableName = tableRs.getString("TABLE_NAME");
+                sb.append(tableName).append("\n");
+                ResultSet columnRs = metaData.getColumns(null, "public", tableName, "%");
+                while (columnRs.next()) {
+                    sb
+                            .append("\t")
+                            .append(columnRs.getString("COLUMN_NAME"))
+                            .append(" [")
+                            .append(columnRs.getString("TYPE_NAME"))
+                            .append("]\n");
+                }
+            }
+            System.out.println(sb);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static List<Long> getFlightsIdBetween(LocalDateTime start, LocalDateTime end) {
