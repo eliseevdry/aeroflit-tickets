@@ -1,7 +1,9 @@
 package org.eliseev.aeroflot.tickets;
 
 import org.eliseev.aeroflot.tickets.utils.PgConnectionManager;
+import org.postgresql.jdbc.PgArray;
 
+import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -22,8 +24,15 @@ public class TicketsRunner {
 //        );
 //        System.out.println(result);
 //        showMetaInf();
+
+//        try {
+//            deleteFlight(45001L);
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+
         try {
-            deleteFlight(45001L);
+            cancelFlights(new long[] {45001L, 45002L});
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -98,6 +107,36 @@ public class TicketsRunner {
             throw new RuntimeException(e);
         }
         return result;
+    }
+
+    private static void cancelFlights(long[] flightsId) throws SQLException {
+        // можно было через WHERE id IN (...) и без батча, тут для демонстрации.
+        String sql = "UPDATE flight SET cancelled = true WHERE id = ?";
+        Connection con = null;
+        PreparedStatement stmt = null;
+        try {
+            con = PgConnectionManager.open();
+            con.setAutoCommit(false);
+            stmt = con.prepareStatement(sql);
+            for (long id : flightsId) {
+                stmt.setLong(1, id);
+                stmt.addBatch();
+            }
+            stmt.executeBatch();
+            con.commit();
+        } catch (Exception ex) {
+            if (con != null) {
+                con.rollback();
+            }
+            throw ex;
+        } finally {
+            if (con != null) {
+                con.close();
+            }
+            if (stmt != null) {
+                stmt.close();
+            }
+        }
     }
 
     private static void deleteFlight(Long flightId) throws SQLException {
