@@ -31,6 +31,9 @@ public class TicketsRunner {
         List<Long> result = new ArrayList<>();
         try (Connection con = PgConnectionManager.open();
              PreparedStatement stmt = con.prepareStatement(sql)) {
+            stmt.setFetchSize(50);
+            stmt.setQueryTimeout(10);
+            stmt.setMaxRows(10000);
             stmt.setTimestamp(1, Timestamp.valueOf(start));
             stmt.setTimestamp(2, Timestamp.valueOf(end));
             ResultSet rs = stmt.executeQuery();
@@ -52,6 +55,9 @@ public class TicketsRunner {
         List<Long> result = new ArrayList<>();
         try (Connection con = PgConnectionManager.open();
              PreparedStatement stmt = con.prepareStatement(sql)) {
+            stmt.setFetchSize(50);
+            stmt.setQueryTimeout(10);
+            stmt.setMaxRows(1000);
             stmt.setLong(1, flight_id);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
