@@ -18,34 +18,40 @@ import java.util.List;
 
 public class TicketsRunner {
     public static void main(String[] args) {
-//        Long flightId = 45000L;
-//        System.out.println(getTicketsId(flightId));
-//        List<Long> result = getFlightsIdBetween(
-//                LocalDateTime.of(2023, 12, 11, 3, 4),
-//                LocalDateTime.of(2023, 12, 13, 12, 30)
-//        );
-//        System.out.println(result);
-//        showMetaInf();
+        try {
 
-//        try {
-//            deleteFlight(45001L);
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }
 
-//        try {
-//            cancelFlights(new long[]{45001L, 45002L});
-//        } catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }
-
-//        loadAircraftPic(1, "Boeing-737-100_1.jpeg");
-        getAircraftPic(1, "first_aircraft.jpg");
+//            Long flightId = 45000L;
+//            System.out.println(getTicketsId(flightId));
+            List<Long> result = getFlightsIdBetween(
+                    LocalDateTime.of(2023, 12, 11, 3, 4),
+                    LocalDateTime.of(2023, 12, 13, 12, 30)
+            );
+            System.out.println(result);
+//            showMetaInf();
+//
+//            try {
+//                deleteFlight(45001L);
+//            } catch (SQLException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            try {
+//                cancelFlights(new long[]{45001L, 45002L});
+//            } catch (SQLException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            loadAircraftPic(1, "Boeing-737-100_1.jpeg");
+//            getAircraftPic(1, "first_aircraft.jpg");
+        } finally {
+            PgConnectionManager.closeAllConnections();
+        }
     }
 
     private static void loadAircraftPic(int aircraftId, String filename) {
         String sql = "UPDATE aircraft SET image = ? WHERE id = ?";
-        try (Connection con = PgConnectionManager.open();
+        try (Connection con = PgConnectionManager.get();
              PreparedStatement stmt = con.prepareStatement(sql)) {
             byte[] file = Files.readAllBytes(Path.of("resources", filename));
             stmt.setBytes(1, file);
@@ -58,7 +64,7 @@ public class TicketsRunner {
 
     private static void getAircraftPic(int aircraftId, String filename) {
         String sql = "SELECT image FROM aircraft WHERE id = ?";
-        try (Connection con = PgConnectionManager.open();
+        try (Connection con = PgConnectionManager.get();
              PreparedStatement stmt = con.prepareStatement(sql)) {
             stmt.setInt(1, aircraftId);
             ResultSet rs = stmt.executeQuery();
@@ -71,7 +77,7 @@ public class TicketsRunner {
     }
 
     private static void showMetaInf() {
-        try (Connection con = PgConnectionManager.open()) {
+        try (Connection con = PgConnectionManager.get()) {
             DatabaseMetaData metaData = con.getMetaData();
             ResultSet tableRs = metaData.getTables(null, "public", "%", new String[]{"TABLE"});
             StringBuilder sb = new StringBuilder();
@@ -101,7 +107,7 @@ public class TicketsRunner {
                 WHERE departure_date BETWEEN ? AND ?;
                 """;
         List<Long> result = new ArrayList<>();
-        try (Connection con = PgConnectionManager.open();
+        try (Connection con = PgConnectionManager.get();
              PreparedStatement stmt = con.prepareStatement(sql)) {
             stmt.setFetchSize(50);
             stmt.setQueryTimeout(10);
@@ -125,7 +131,7 @@ public class TicketsRunner {
                 WHERE flight_id = ?;
                 """;
         List<Long> result = new ArrayList<>();
-        try (Connection con = PgConnectionManager.open();
+        try (Connection con = PgConnectionManager.get();
              PreparedStatement stmt = con.prepareStatement(sql)) {
             stmt.setFetchSize(50);
             stmt.setQueryTimeout(10);
@@ -147,7 +153,7 @@ public class TicketsRunner {
         Connection con = null;
         PreparedStatement stmt = null;
         try {
-            con = PgConnectionManager.open();
+            con = PgConnectionManager.get();
             con.setAutoCommit(false);
             stmt = con.prepareStatement(sql);
             for (long id : flightsId) {
@@ -178,7 +184,7 @@ public class TicketsRunner {
         PreparedStatement deleteTicketsStmt = null;
         PreparedStatement deleteFlightStmt = null;
         try {
-            con = PgConnectionManager.open();
+            con = PgConnectionManager.get();
             con.setAutoCommit(false);
             deleteTicketsStmt = con.prepareStatement(deleteTicketsSql);
             deleteTicketsStmt.setLong(1, flightId);
