@@ -21,7 +21,12 @@ public class TicketsRunner {
 //                LocalDateTime.of(2023, 12, 13, 12, 30)
 //        );
 //        System.out.println(result);
-        showMetaInf();
+//        showMetaInf();
+        try {
+            deleteFlight(45001L);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static void showMetaInf() {
@@ -93,5 +98,43 @@ public class TicketsRunner {
             throw new RuntimeException(e);
         }
         return result;
+    }
+
+    private static void deleteFlight(Long flightId) throws SQLException {
+        String deleteTicketsSql = "DELETE FROM ticket WHERE flight_id = ?";
+        String deleteFlightSql = "DELETE FROM flight WHERE id = ?";
+        Connection con = null;
+        PreparedStatement deleteTicketsStmt = null;
+        PreparedStatement deleteFlightStmt = null;
+        try {
+            con = PgConnectionManager.open();
+            con.setAutoCommit(false);
+            deleteTicketsStmt = con.prepareStatement(deleteTicketsSql);
+            deleteTicketsStmt.setLong(1, flightId);
+            deleteFlightStmt = con.prepareStatement(deleteFlightSql);
+            deleteFlightStmt.setLong(1, flightId);
+
+            deleteTicketsStmt.executeUpdate();
+            if (true) {
+                throw new RuntimeException("Oops");
+            }
+            deleteFlightStmt.executeUpdate();
+            con.commit();
+        } catch (Exception ex) {
+            if (con != null) {
+                con.rollback();
+            }
+            throw ex;
+        } finally {
+            if (con != null) {
+                con.close();
+            }
+            if (deleteTicketsStmt != null) {
+                deleteTicketsStmt.close();
+            }
+            if (deleteFlightStmt != null) {
+                deleteFlightStmt.close();
+            }
+        }
     }
 }
