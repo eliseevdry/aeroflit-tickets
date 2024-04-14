@@ -9,12 +9,13 @@ import java.sql.Statement;
 public class TicketsRunner {
     public static void main(String[] args) {
         String sql = """
-                ALTER TABLE flight
-                DROP COLUMN IF EXISTS status; 
+                UPDATE flight
+                SET cancelled = true
+                WHERE id in (SELECT id FROM flight ORDER BY random() LIMIT 1000)
                 """;
         try (Connection con = PgConnectionManager.open();
              Statement stmt = con.createStatement()) {
-            boolean executeResult = stmt.execute(sql);
+            int executeResult = stmt.executeUpdate(sql);
             System.out.println(executeResult);
         } catch (SQLException e) {
             throw new RuntimeException(e);
