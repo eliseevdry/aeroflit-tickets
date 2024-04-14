@@ -1,9 +1,11 @@
 package org.eliseev.aeroflot.tickets;
 
 import org.eliseev.aeroflot.tickets.utils.PgConnectionManager;
-import org.postgresql.jdbc.PgArray;
 
-import java.sql.Array;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -31,10 +33,40 @@ public class TicketsRunner {
 //            throw new RuntimeException(e);
 //        }
 
-        try {
-            cancelFlights(new long[] {45001L, 45002L});
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+//        try {
+//            cancelFlights(new long[]{45001L, 45002L});
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }
+
+//        loadAircraftPic(1, "Boeing-737-100_1.jpeg");
+        getAircraftPic(1, "first_aircraft.jpg");
+    }
+
+    private static void loadAircraftPic(int aircraftId, String filename) {
+        String sql = "UPDATE aircraft SET image = ? WHERE id = ?";
+        try (Connection con = PgConnectionManager.open();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+            byte[] file = Files.readAllBytes(Path.of("resources", filename));
+            stmt.setBytes(1, file);
+            stmt.setInt(2, aircraftId);
+            stmt.executeUpdate();
+        } catch (SQLException | IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static void getAircraftPic(int aircraftId, String filename) {
+        String sql = "SELECT image FROM aircraft WHERE id = ?";
+        try (Connection con = PgConnectionManager.open();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+            stmt.setInt(1, aircraftId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                Files.write(Path.of("resources", filename), rs.getBytes("image"), StandardOpenOption.CREATE);
+            }
+        } catch (SQLException | IOException ex) {
+            throw new RuntimeException(ex);
         }
     }
 
