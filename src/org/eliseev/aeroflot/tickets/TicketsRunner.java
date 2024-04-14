@@ -10,23 +10,19 @@ import java.sql.Statement;
 public class TicketsRunner {
     public static void main(String[] args) {
         String sql = """
-                SELECT *
-                FROM flight
-                ORDER BY random()
-                LIMIT 100
+                INSERT INTO city(country_name, name)
+                VALUES
+                ('Russia', 'Moscow'),
+                ('Russia', 'Voronezh');
                 """;
         try (Connection con = PgConnectionManager.open();
              Statement stmt = con.createStatement()) {
-            ResultSet rs = stmt.executeQuery(sql);
+            int count = stmt.executeUpdate(sql, Statement.RETURN_GENERATED_KEYS);
+            ResultSet rs = stmt.getGeneratedKeys();
+            System.out.println("Update count: " + count);
             while (rs.next()) {
-                String result = "--- id = " +
-                                rs.getLong("id") + " ---\n" +
-                                "aircraft_id = " + rs.getInt("aircraft_id") + "\n" +
-                                "path_id = " + rs.getInt("path_id") + "\n" +
-                                "departure_date = " + rs.getTimestamp("departure_date") + "\n" +
-                                "arrival_date = " + rs.getTimestamp("arrival_date") + "\n" +
-                                "cancelled = " + rs.getBoolean("cancelled") + "\n";
-                System.out.println(result);
+                String result = "--- id = " + rs.getInt("id") + " ---\n";
+                System.out.print(result);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
