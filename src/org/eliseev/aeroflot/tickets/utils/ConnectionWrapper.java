@@ -71,7 +71,9 @@ public class ConnectionWrapper implements Connection {
     }
 
     @Override
-    public void close() {
+    public void close() throws SQLException {
+        connection.setAutoCommit(true);
+        connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
         connectionPool.add(this);
     }
 
@@ -292,11 +294,15 @@ public class ConnectionWrapper implements Connection {
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return connection.unwrap(iface);
+        if (isWrapperFor(iface)) {
+            return connection.unwrap(iface);
+        } else {
+            throw new SQLException("Cannot unwrap to " + iface.getName());
+        }
     }
 
     @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return connection.isWrapperFor(iface);
+    public boolean isWrapperFor(Class<?> iface) {
+        return iface.isAssignableFrom(Connection.class);
     }
 }
