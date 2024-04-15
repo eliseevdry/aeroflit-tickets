@@ -1,6 +1,5 @@
 package org.eliseev.aeroflot.tickets.dao;
 
-import org.eliseev.aeroflot.tickets.dto.FlightStatus;
 import org.eliseev.aeroflot.tickets.entity.Flight;
 import org.eliseev.aeroflot.tickets.exception.DaoException;
 import org.eliseev.aeroflot.tickets.utils.PgConnectionManager;
@@ -9,13 +8,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.Optional;
-
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.ARRIVED;
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.CANCELLED;
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.DEPARTED;
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.SCHEDULED;
 
 public class FlightDao {
 
@@ -31,6 +26,17 @@ public class FlightDao {
             FROM flight
             """;
     private static final String SQL_FIND_BY_ID = SQL_FIND_ALL + " WHERE id = ? LIMIT 1";
+
+    private static final String SQL_CREATE = """
+            INSERT INTO flight(path_id, aircraft_id, departure_date, arrival_date, cancelled)
+            VALUES (?,?,?,?,?)
+            """;
+
+    private static final String SQL_UPDATE = """
+            UPDATE flight
+            SET path_id = ?, aircraft_id = ?, departure_date = ?, arrival_date = ?, cancelled = ?
+            WHERE id = ?
+            """;
 
     private FlightDao() {
     }
@@ -65,6 +71,40 @@ public class FlightDao {
         }
     }
 
+    public Flight create(Flight flight) {
+        try (Connection con = PgConnectionManager.get();
+             PreparedStatement stmt = con.prepareStatement(SQL_CREATE, Statement.RETURN_GENERATED_KEYS)) {
+            mapStatement(stmt, flight);
+            stmt.executeUpdate();
+            ResultSet resultSet = stmt.getGeneratedKeys();
+            if (resultSet.next()) {
+                flight.setId(resultSet.getLong(1));
+            }
+            return flight;
+        } catch (SQLException ex) {
+            throw new DaoException(ex);
+        }
+    }
+
+    public Flight update(Flight flight) {
+        try (Connection con = PgConnectionManager.get();
+             PreparedStatement stmt = con.prepareStatement(SQL_UPDATE)) {
+            mapStatement(stmt, flight);
+            stmt.setLong(6, flight.getId());
+        } catch (SQLException ex) {
+            throw new DaoException(ex);
+        }
+        return flight;
+    }
+
+    private void mapStatement(PreparedStatement stmt, Flight flight) throws SQLException {
+        stmt.setInt(1, flight.getPathId());
+        stmt.setInt(2, flight.getAircraftId());
+        stmt.setTimestamp(3, Timestamp.from(flight.getDepartureDate()));
+        stmt.setTimestamp(4, Timestamp.from(flight.getArrivalDate()));
+        stmt.setBoolean(5, flight.getCancelled());
+    }
+
     private Flight mapFlight(ResultSet rs) throws SQLException {
         Flight flight;
         flight = new Flight(
@@ -76,21 +116,5 @@ public class FlightDao {
                 rs.getBoolean("cancelled")
         );
         return flight;
-    }
-
-    private FlightStatus resolveStatus(Instant departureDate, Instant arrivalDate, boolean isCancelled) {
-        FlightStatus status;
-        if (isCancelled) {
-            status = CANCELLED;
-        }
-        Instant now = Instant.now();
-        if (arrivalDate.isBefore(now)) {
-            status = ARRIVED;
-        } else if (departureDate.isAfter(now)) {
-            status = SCHEDULED;
-        } else {
-            status = DEPARTED;
-        }
-        return status;
     }
 }
