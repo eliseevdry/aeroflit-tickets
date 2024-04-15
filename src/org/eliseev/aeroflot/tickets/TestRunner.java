@@ -16,11 +16,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TicketsRunner {
+public class TestRunner {
     public static void main(String[] args) {
         try {
-
-
 //            Long flightId = 45000L;
 //            System.out.println(getTicketsId(flightId));
             List<Long> result = getFlightsIdBetween(
