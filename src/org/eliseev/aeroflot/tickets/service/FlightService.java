@@ -1,9 +1,12 @@
 package org.eliseev.aeroflot.tickets.service;
 
 import org.eliseev.aeroflot.tickets.dao.FlightDao;
+import org.eliseev.aeroflot.tickets.dto.CreateUpdateFlightDto;
 import org.eliseev.aeroflot.tickets.dto.FlightStatus;
 import org.eliseev.aeroflot.tickets.dto.GetFlightDto;
 import org.eliseev.aeroflot.tickets.entity.Flight;
+import org.eliseev.aeroflot.tickets.mapper.CreateUpdateFlightMapper;
+import org.eliseev.aeroflot.tickets.mapper.GetFlightMapper;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -16,6 +19,10 @@ import static org.eliseev.aeroflot.tickets.dto.FlightStatus.SCHEDULED;
 public class FlightService {
     private static final FlightService INSTANCE = new FlightService();
     private final FlightDao flightDao = FlightDao.getInstance();
+
+    private final CreateUpdateFlightMapper createUpdateFlightMapper = CreateUpdateFlightMapper.getInstance();
+
+    private final GetFlightMapper getFlightMapper = GetFlightMapper.getInstance();
 
     private FlightService() {
     }
@@ -30,33 +37,17 @@ public class FlightService {
 
     public GetFlightDto findById(long id) {
         Optional<Flight> maybeFlight = flightDao.findById(id);
-        return maybeFlight.map(this::mapGetFlightDto).orElse(null);
+        return maybeFlight.map(getFlightMapper::map).orElse(null);
     }
 
-    private GetFlightDto mapGetFlightDto(Flight flight) {
-        return new GetFlightDto(
-                flight.getId(),
-                flight.getPathId(),
-                flight.getAircraftId(),
-                flight.getDepartureDate(),
-                flight.getArrivalDate(),
-                resolveStatus(flight.getDepartureDate(), flight.getArrivalDate(), flight.getCancelled())
-        );
-    }
-
-    private FlightStatus resolveStatus(Instant departureDate, Instant arrivalDate, boolean isCancelled) {
-        if (isCancelled) {
-            return CANCELLED;
-        }
-        FlightStatus status;
-        Instant now = Instant.now();
-        if (arrivalDate.isBefore(now)) {
-            status = ARRIVED;
-        } else if (departureDate.isAfter(now)) {
-            status = SCHEDULED;
+    public GetFlightDto createOrUpdate(CreateUpdateFlightDto dto) {
+        Flight mappedFlight = createUpdateFlightMapper.map(dto);
+        Flight result;
+        if (mappedFlight.getId() == null) {
+            result = flightDao.create(mappedFlight);
         } else {
-            status = DEPARTED;
+            result = flightDao.update(mappedFlight);
         }
-        return status;
+        return getFlightMapper.map(result);
     }
 }
