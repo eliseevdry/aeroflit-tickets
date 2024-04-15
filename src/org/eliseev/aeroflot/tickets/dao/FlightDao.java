@@ -1,5 +1,6 @@
 package org.eliseev.aeroflot.tickets.dao;
 
+import org.eliseev.aeroflot.tickets.dto.FlightFilter;
 import org.eliseev.aeroflot.tickets.entity.Flight;
 import org.eliseev.aeroflot.tickets.exception.DaoException;
 import org.eliseev.aeroflot.tickets.utils.PgConnectionManager;
@@ -10,11 +11,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class FlightDao {
 
     private static final FlightDao INSTANCE = new FlightDao();
+
+    private final FlightFilter emptyFilter = new FlightFilter(null, null, null, null, null);
 
     private static final String SQL_DELETE_BY_ID = """
             DELETE
@@ -43,6 +49,59 @@ public class FlightDao {
 
     public static FlightDao getInstance() {
         return INSTANCE;
+    }
+
+    public List<Flight> findAllWithFilter(FlightFilter filter) {
+        StringBuilder sqlBuilder = new StringBuilder(SQL_FIND_ALL);
+        List<Object> args = new ArrayList<>();
+        if (!filter.equals(emptyFilter)) {
+            List<String> filters = new ArrayList<>();
+            if (filter.pathId() != null) {
+                filters.add("path_id = ?");
+                args.add(filter.pathId());
+            }
+            if (filter.aircraftId() != null) {
+                filters.add("aircraft_id = ?");
+                args.add(filter.aircraftId());
+            }
+            if (filter.isCancelled() != null) {
+                filters.add("cancelled = ?");
+                args.add(filter.isCancelled());
+            }
+            sqlBuilder.append(filters.stream()
+                    .collect(Collectors.joining(" AND ", "WHERE ", " OFFSET ? LIMIT ?")));
+        }
+        try (Connection con = PgConnectionManager.get();
+             PreparedStatement stmt = con.prepareStatement(sqlBuilder.toString())) {
+            args.add(filter.offset() == null ? 0L : filter.offset());
+            args.add(filter.limit() == null ? stmt.getMaxRows() : filter.limit());
+            for (int i = 0; i < args.size(); i++) {
+                stmt.setObject(i + 1, args.get(i));
+            }
+            ResultSet rs = stmt.executeQuery();
+            List<Flight> result = new ArrayList<>();
+            while (rs.next()) {
+                result.add(mapFlight(rs));
+            }
+            return result;
+        } catch (SQLException ex) {
+            throw new DaoException(ex);
+        }
+    }
+
+    private List<Flight> findAll(String sql) {
+        try (Connection con = PgConnectionManager.get();
+             PreparedStatement stmt = con.prepareStatement(sql)) {
+            con.setReadOnly(true);
+            ResultSet rs = stmt.executeQuery();
+            List<Flight> content = new ArrayList<>();
+            while (rs.next()) {
+                content.add(mapFlight(rs));
+            }
+            return content;
+        } catch (SQLException ex) {
+            throw new DaoException(ex);
+        }
     }
 
     public boolean deleteById(long id) {

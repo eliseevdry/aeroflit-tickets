@@ -2,19 +2,14 @@ package org.eliseev.aeroflot.tickets.service;
 
 import org.eliseev.aeroflot.tickets.dao.FlightDao;
 import org.eliseev.aeroflot.tickets.dto.CreateUpdateFlightDto;
-import org.eliseev.aeroflot.tickets.dto.FlightStatus;
+import org.eliseev.aeroflot.tickets.dto.FlightFilter;
 import org.eliseev.aeroflot.tickets.dto.GetFlightDto;
 import org.eliseev.aeroflot.tickets.entity.Flight;
 import org.eliseev.aeroflot.tickets.mapper.CreateUpdateFlightMapper;
 import org.eliseev.aeroflot.tickets.mapper.GetFlightMapper;
 
-import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
-
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.ARRIVED;
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.CANCELLED;
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.DEPARTED;
-import static org.eliseev.aeroflot.tickets.dto.FlightStatus.SCHEDULED;
 
 public class FlightService {
     private static final FlightService INSTANCE = new FlightService();
@@ -49,5 +44,9 @@ public class FlightService {
             result = flightDao.update(mappedFlight);
         }
         return getFlightMapper.map(result);
+    }
+
+    public List<GetFlightDto> findAllWithFilter(FlightFilter filter) {
+        return flightDao.findAllWithFilter(filter).stream().map(getFlightMapper::map).toList();
     }
 }
